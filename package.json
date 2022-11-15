@@ -1,0 +1,18 @@
+{
+  "name": "@sasjs/electron",
+  "description": "Electron app with @sasjs/server and @sasjs/react-seed-app",
+  "main": "index.js",
+  "scripts": {
+    "start": "cd server && npm run server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sasjs/electron.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sasjs/electron/issues"
+  },
+  "homepage": "https://electron.sasjs.io"
+}
