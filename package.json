@@ -3,7 +3,8 @@
   "description": "Electron app with @sasjs/server and @sasjs/react-seed-app",
   "main": "index.js",
   "scripts": {
-    "start": "cd server && npm run server"
+    "start": "cd server && npm run server",
+    "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true"
   },
   "repository": {
     "type": "git",
