@@ -1,3 +1,6 @@
 [submodule "server"]
 	path = server
 	url = https://github.com/sasjs/server
+[submodule "react-seed-app"]
+	path = react-seed-app
+	url = https://github.com/sasjs/react-seed-app

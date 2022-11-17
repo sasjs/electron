@@ -1,9 +1,10 @@
 {
   "name": "@sasjs/electron",
   "description": "Electron app with @sasjs/server and @sasjs/react-seed-app",
-  "main": "index.js",
+  "main": "electron/main.ts",
   "scripts": {
     "start": "cd server && npm run server",
+    "start:electron": "ELECTRON_START_URL=http://localhost:3000 && electron .",
     "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true"
   },
   "repository": {
@@ -15,5 +16,12 @@
   "bugs": {
     "url": "https://github.com/sasjs/electron/issues"
   },
-  "homepage": "https://electron.sasjs.io"
+  "homepage": "https://electron.sasjs.io",
+  "devDependencies": {
+    "electron": "21.2.3"
+  },
+  "dependencies": {
+    "@sasjs/utils": "2.51.0",
+    "shelljs": "0.8.5"
+  }
 }
