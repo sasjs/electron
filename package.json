@@ -2,10 +2,29 @@
   "name": "@sasjs/electron",
   "description": "Electron app with @sasjs/server and @sasjs/react-seed-app",
   "main": "electron/main.ts",
+  "version": "0.0.1",
   "scripts": {
     "start": "cd server && npm run server",
     "start:electron": "ELECTRON_START_URL=http://localhost:3000 && electron .",
-    "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true"
+    "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true",
+    "package:win:64": "electron-builder build --win --x64 -c.extraMetadata.main=build/electron/main.ts",
+    "build:server:api": "cd server/api && npm run prebuild && npm ci && npm run build && npm run postbuild",
+    "build:electron": "rm -rf build && mkdir build && cp -r electron/. build/electron && cd build && mkdir server && npm run build:server:api && cp -r ../server/api/build/. server && cp -r ../server/api/node_modules server && mv server/node_modules server/node_modules_tmp && mkdir react-seed-app && cp -r ../react-seed-app/build react-seed-app"
+  },
+  "build": {
+    "appId": "sasjs/electron",
+    "productName": "sasjs/electron",
+    "files": [
+      "build/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "nsis": {
+      "deleteAppDataOnUninstall": true,
+      "oneClick":false
+    }
   },
   "repository": {
     "type": "git",
@@ -18,10 +37,11 @@
   },
   "homepage": "https://electron.sasjs.io",
   "devDependencies": {
-    "electron": "21.2.3"
+    "electron": "21.2.3",
+    "electron-builder": "23.6.0"
   },
   "dependencies": {
     "@sasjs/utils": "2.51.0",
-    "shelljs": "0.8.5"
+    "electron-log": "4.4.8"
   }
 }
