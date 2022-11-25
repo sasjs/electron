@@ -1,179 +1,207 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
-const url = require('url')
-const path = require('path')
-const sasjsUtils = require('@sasjs/utils')
-const { fileExists, readFile, createFile } = sasjsUtils
-const { exec } = require('child_process')
-const net = require('electron').net
-const log = require('electron-log')
+import { BrowserWindow, net, ipcMain } from 'electron'
+import path from 'path'
+import { fileExists, readFile, createFile } from '@sasjs/utils'
+import log from 'electron-log'
+import url from 'url'
+import { exec } from 'child_process'
 
-let mainWindow
-let indexPath
-const presetPath = path.join(__dirname, 'preload.js')
-const sasPathKey = 'SAS_PATH='
-const serverApiEnvPath = path.join(__dirname, '..', '..', '..', '..', '.env')
-const getSasPathHtml = path.join(__dirname, 'getSasPath.html')
-const reactAppHtml = path.join(
-  __dirname,
-  '..',
-  'react-seed-app',
-  'build',
-  'index.html'
-)
-const sasjsServerTitle = 'SASjsServer'
-
-const startSasjsServer = () => {
-  exec(
-    `start /min "${sasjsServerTitle}" node resources\\appSrc\\build\\server\\src\\server.js`,
-    (err, _, stderr) => {
-      if (err) log.error(`Failed to start @sasjs/server. Error: `, err)
-      if (stderr) log.error(`Failed to start @sasjs/server. Error: `, stderr)
-    }
+export default class Main {
+  static mainWindow: Electron.BrowserWindow
+  static application: Electron.App
+  static BrowserWindow
+  static serverApiEnvPath = path.join(__dirname, '..', '..', '..', '..', '.env')
+  static sasPathKey = 'SAS_PATH='
+  static sasjsServerTitle = 'SASjsServer'
+  static indexPath: string
+  static seedAppPath = path.join(
+    __dirname,
+    '..',
+    'react-seed-app',
+    'build',
+    'index.html'
   )
-}
+  static getSasPath = path.join(__dirname, 'getSasPath.html')
+  static serverFolder = path.join('resources', 'appSrc', 'build', 'server')
+  static serverTitle = '@sasjs/server'
 
-const stopSasjsServer = () => {
-  log.info('Stopping @sasjs/server')
-
-  exec(
-    `taskkill /FI "WindowTitle eq ${sasjsServerTitle}*" /T /F`,
-    (err, _, stderr) => {
-      if (err) log.error(`Failed to stop @sasjs/server. Error: `, err)
-      if (stderr) log.error(`Failed to stop @sasjs/server. Error: `, stderr)
-    }
-  )
-}
-
-app.on('ready', async () => {
-  if (await fileExists(serverApiEnvPath)) {
-    log.info('@sasjs/server .env file exists.')
-
-    startSasjsServer()
-
-    const env = await readFile(serverApiEnvPath)
-
-    let sasPath = env.match(new RegExp(`${sasPathKey}.*`))
-    if (sasPath) sasPath = sasPath[0].replace(sasPathKey, '')
-
-    if (sasPath) indexPath = reactAppHtml
-    else indexPath = getSasPathHtml
-  } else {
-    log.info('@sasjs/server .env file does not exist.')
-
-    indexPath = getSasPathHtml
+  private static onWindowAllClosed() {
+    if (process.platform !== 'darwin') Main.application.quit()
   }
 
-  const startUrl = url.format({
-    pathname: indexPath,
-    protocol: 'file',
-    slashes: true
-  })
+  private static onClose() {
+    ;(Main.mainWindow as any) = null
 
-  mainWindow = new BrowserWindow({
-    show: false,
-    webPreferences: {
-      preload: presetPath
-    }
-  })
-  mainWindow.maximize()
-  mainWindow.show()
-  mainWindow.loadURL(startUrl)
-  mainWindow.on('closed', () => {
-    mainWindow = null
+    Main.stopSasjsServer()
+  }
 
-    stopSasjsServer()
-  })
-})
-
-ipcMain.on('set-sas-path', async (_, path) => {
-  log.info(`Received on 'set-sas-path' event.`)
-  log.info('Extracting application source code.')
-
-  // INFO: extract source code
-  exec('cd resources && npx asar extract app.asar appSrc', (err, _, stderr) => {
-    if (err) log.error(`extract source code error: `, err)
-    if (stderr) log.error(`extract source code stderr: `, stderr)
-
-    log.info('Preparing node_modules for @sasjs/server ')
-
-    // INFO: rename node_modules folder
+  private static startSasjsServer() {
+    log.info(`Starting ${Main.serverTitle}`)
     exec(
-      'cd resources\\appSrc\\build\\server && move node_modules_tmp node_modules',
+      `start /min "${Main.sasjsServerTitle}" node ${path.join(
+        this.serverFolder,
+        'src',
+        'server.js'
+      )}`,
       (err, _, stderr) => {
-        if (err) log.error('rename node_modules error: ', err)
-        if (stderr) log.error('rename node_modules stderr: ', stderr)
-
-        // INFO: create .env file with path to SAS executable
-        createFile(serverApiEnvPath, `${sasPathKey}${path}`)
-          .then(() => {
-            log.info('Created .env file with path to SAS executable')
-            log.info('Starting @sasjs/server')
-
-            startSasjsServer()
-
-            const pingInterval = setInterval(() => {
-              pingServer()
-            }, 200)
-
-            const pingServer = () => {
-              log.info('Pinging @sasjs/server')
-
-              const serverUrl = {
-                protocol: 'http:',
-                hostname: 'localhost',
-                port: 5000
-              }
-
-              const request = net.request({
-                method: 'GET',
-                protocol: serverUrl.protocol,
-                hostname: serverUrl.hostname,
-                port: serverUrl.port,
-                path: '/'
-              })
-
-              request.on('response', (response) => {
-                if (response.statusCode === 200) {
-                  log.info(
-                    `@sasjs/server is up and running at ${
-                      serverUrl.protocol +
-                      '//' +
-                      serverUrl.hostname +
-                      ':' +
-                      serverUrl.port
-                    }.`
-                  )
-
-                  clearInterval(pingInterval)
-
-                  log.info('Loading @sasjs/react-seed-app index.html')
-
-                  // INFO: loading @sasjs/react-seed-app index.html
-                  mainWindow.loadURL(
-                    url.format({
-                      pathname: reactAppHtml,
-                      protocol: 'file',
-                      slashes: true
-                    })
-                  )
-                }
-              })
-
-              request.on('error', () => {})
-              request.setHeader('Content-Type', 'application/json')
-              request.end()
-            }
-          })
-          .catch((err) => {
-            log.error(`Failed to create ${serverApiEnvPath}. Error: `, err)
-          })
+        if (err) log.error(`Failed to start ${Main.serverTitle}. Error: `, err)
+        if (stderr)
+          log.error(`Failed to start ${Main.serverTitle}. Error: `, stderr)
       }
     )
-  })
-})
+  }
 
-app.on('before-quit', () => {
-  log.info(`Received 'before-quit' event.`)
+  private static stopSasjsServer() {
+    log.info(`Stopping ${Main.serverTitle}`)
 
-  stopSasjsServer()
-})
+    exec(
+      `taskkill /FI "WindowTitle eq ${Main.sasjsServerTitle}*" /T /F`,
+      (err, _, stderr) => {
+        if (err) log.error(`Failed to stop ${Main.serverTitle}. Error: `, err)
+        if (stderr)
+          log.error(`Failed to stop ${Main.serverTitle}. Error: `, stderr)
+      }
+    )
+  }
+
+  static async onReady() {
+    log.info(`checking if ${Main.serverApiEnvPath} exists`)
+
+    if (await fileExists(Main.serverApiEnvPath)) {
+      log.info(`${Main.serverTitle} .env file exists.`)
+
+      Main.startSasjsServer()
+
+      const env = await readFile(Main.serverApiEnvPath)
+
+      let sasPath: RegExpMatchArray | string =
+        env.match(new RegExp(`${Main.sasPathKey}.*`)) || ''
+      if (sasPath) sasPath = sasPath[0].replace(Main.sasPathKey, '')
+      if (sasPath) Main.indexPath = Main.seedAppPath
+      else Main.indexPath = Main.getSasPath
+    } else {
+      log.info(`${Main.serverTitle} .env file does not exist.`)
+
+      Main.indexPath = Main.getSasPath
+    }
+
+    const startUrl = url.format({
+      pathname: Main.indexPath,
+      protocol: 'file',
+      slashes: true
+    })
+
+    Main.mainWindow = new Main.BrowserWindow({
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js')
+      }
+    })
+    Main.mainWindow.maximize()
+    Main.mainWindow.show()
+    Main.mainWindow.loadURL(startUrl)
+    Main.mainWindow.on('closed', Main.onClose)
+  }
+
+  static main(app: Electron.App, browserWindow: typeof BrowserWindow) {
+    Main.BrowserWindow = browserWindow
+    Main.application = app
+    Main.application.on('ready', Main.onReady)
+    Main.application.on('window-all-closed', Main.onWindowAllClosed)
+    Main.application.on('before-quit', Main.onClose)
+    Main.application.on('before-quit', Main.onClose)
+
+    ipcMain.on('set-sas-path', Main.onSetSasPath)
+  }
+
+  static async onSetSasPath(_: any, sasPath: string) {
+    log.info(`Received on 'set-sas-path' event.`)
+    log.info('Extracting application source code.')
+
+    // INFO: extract source code
+    exec(
+      'cd resources && npx asar extract app.asar appSrc',
+      (err, _, stderr) => {
+        if (err) log.error(`extract source code error: `, err)
+        if (stderr) log.error(`extract source code stderr: `, stderr)
+
+        log.info(`Preparing node_modules for ${Main.serverTitle}`)
+
+        // INFO: rename node_modules folder
+        exec(
+          `cd ${Main.serverFolder} && move node_modules_tmp node_modules`,
+          (err, _, stderr) => {
+            if (err) log.error('rename node_modules error: ', err)
+            if (stderr) log.error('rename node_modules stderr: ', stderr)
+
+            // INFO: create .env file with path to SAS executable
+            createFile(Main.serverApiEnvPath, `${Main.sasPathKey}${sasPath}`)
+              .then(() => {
+                log.info('Created .env file with path to SAS executable')
+
+                Main.startSasjsServer()
+
+                const pingInterval = setInterval(() => {
+                  pingServer()
+                }, 200)
+
+                const pingServer = () => {
+                  log.info(`Pinging ${Main.serverTitle}`)
+
+                  const serverUrl = {
+                    protocol: 'http:',
+                    hostname: 'localhost',
+                    port: 5000
+                  }
+
+                  const request = net.request({
+                    method: 'GET',
+                    protocol: serverUrl.protocol,
+                    hostname: serverUrl.hostname,
+                    port: serverUrl.port,
+                    path: '/'
+                  })
+
+                  request.on('response', (response) => {
+                    if (response.statusCode === 200) {
+                      log.info(
+                        `${Main.serverTitle} is up and running at ${
+                          serverUrl.protocol +
+                          '//' +
+                          serverUrl.hostname +
+                          ':' +
+                          serverUrl.port
+                        }.`
+                      )
+
+                      clearInterval(pingInterval)
+
+                      log.info('Loading @sasjs/react-seed-app index.html')
+
+                      // INFO: loading @sasjs/react-seed-app index.html
+                      Main.mainWindow.loadURL(
+                        url.format({
+                          pathname: Main.seedAppPath,
+                          protocol: 'file',
+                          slashes: true
+                        })
+                      )
+                    }
+                  })
+
+                  request.on('error', () => {})
+                  request.setHeader('Content-Type', 'application/json')
+                  request.end()
+                }
+              })
+              .catch((err) => {
+                log.error(
+                  `Failed to create ${Main.serverApiEnvPath}. Error: `,
+                  err
+                )
+              })
+          }
+        )
+      }
+    )
+  }
+}
