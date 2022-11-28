@@ -26,10 +26,10 @@ jobs:
         run: dir
 
       - name: Check file system server
-        run: cd server && ls
+        run: dir server
 
       - name: Check file system react-seed-app
-        run: cd react-seed-app && ls
+        run: dir react-seed-app
 
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1
