@@ -1,7 +1,7 @@
 {
   "name": "@sasjs/electron",
   "description": "Electron app with @sasjs/server and @sasjs/react-seed-app",
-  "main": "electron/app.ts",
+  "main": "electron/app.js",
   "version": "0.0.1",
   "scripts": {
     "start:electron": "npm run build:electron && ELECTRON_START_URL=http://localhost:3000 && electron build/electron/app.js",
