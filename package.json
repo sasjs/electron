@@ -27,7 +27,7 @@
       "deleteAppDataOnUninstall": true,
       "oneClick": false
     },
-    "publish": "never"
+    "publish": ["github"]
   },
   "repository": {
     "type": "git",
