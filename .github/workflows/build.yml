@@ -4,11 +4,12 @@ on: push
 
 jobs:
   release:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
         os: [windows-latest]
+        node-version: [lts/*]
 
     steps:
       - name: Check out Git repository
@@ -16,11 +17,6 @@ jobs:
 
       - name: Checkout submodules
         run: git submodule update --init --recursive
-
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
-        with:
-          node-version: 10
 
       - name: Check file system root
         run: ls
