@@ -5,9 +5,11 @@
   "version": "0.0.1",
   "scripts": {
     "start:electron": "npm run build:electron && ELECTRON_START_URL=http://localhost:3000 && electron build/electron/app.js",
+    "prepare:build:folders": "rm -rf build && mkdir build && cd build && mkdir server && mkdir react-seed-app",
     "build:electron": "./node_modules/.bin/tsc && cp electron/preload.js build/electron && cp electron/getSasPath.html build/electron",
-    "build:server:api": "cd server/api && npm run prebuild && npm ci && npm run build && npm run postbuild",
-    "build": "rm -rf build && npm run build:electron && cd build && mkdir server && npm run build:server:api && cp -r ../server/api/build/. server && cp -r ../server/api/node_modules server && mv server/node_modules server/node_modules_tmp && mkdir react-seed-app && cp -r ../react-seed-app/build react-seed-app",
+    "build:server:api": "cd server/api && npm ci && npm run prebuild && npm ci && npm run build && npm run postbuild && cp -r build/. ../../build/server && cp -r node_modules ../../build/server && mv ../../build/server/node_modules ../../build/server/node_modules_tmp",
+    "build:react-seed-app": "cd react-seed-app && npm ci && npm run build && cp -r build ../build/react-seed-app",
+    "build": "npm run prepare:build:folders && npm run build:electron && npm run build:server:api && npm run build:react-seed-app",
     "package:win:64": "electron-builder build --win --x64 -c.extraMetadata.main=build/electron/app.js",
     "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true"
   },
