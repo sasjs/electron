@@ -26,7 +26,8 @@
     "nsis": {
       "deleteAppDataOnUninstall": true,
       "oneClick": false
-    }
+    },
+    "publish": "always"
   },
   "repository": {
     "type": "git",
