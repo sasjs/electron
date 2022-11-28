@@ -19,6 +19,15 @@ jobs:
         with:
           node-version: 10
 
+      - name: Check file system root
+        run: ls
+
+      - name: Check file system server
+        run: ls server
+
+      - name: Check file system react-seed-app
+        run: ls react-seed-app
+
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
