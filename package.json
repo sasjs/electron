@@ -11,7 +11,9 @@
     "build:react-seed-app": "cd react-seed-app && npm ci && npm run build && cp -r build ../build/react-seed-app",
     "build": "npm run prepare:build:folders && npm run build:electron && npm run build:server:api && npm run build:react-seed-app",
     "package:win:64": "electron-builder build --win --x64 -c.extraMetadata.main=build/electron/app.js",
-    "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true"
+    "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true",
+    "lint:fix": "npx prettier --write \"electron/**/*.{ts,tsx,js,jsx,html,css,sass,less,json,yml,md,graphql}\"",
+    "lint": "npx prettier --check \"electron/**/*.{ts,tsx,js,jsx,html,css,sass,less,json,yml,md,graphql}\""
   },
   "build": {
     "appId": "sasjs/electron",

@@ -1,6 +1,9 @@
-name: Build/release
+name: SASjs Electron Run Build and Release
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   release:
