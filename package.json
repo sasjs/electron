@@ -7,7 +7,7 @@
     "start:electron": "npm run build:electron && ELECTRON_START_URL=http://localhost:3000 && electron build/electron/app.js",
     "prepare:build:folders": "rm -rf build && mkdir build && cd build && mkdir server && mkdir react-seed-app",
     "build:electron": "tsc && cp electron/preload.js build/electron && cp electron/getSasPath.html build/electron",
-    "build:server:api": "cd server/api && npm ci && npm run exe && cp ../executables/api-win.exe ../../build/server",
+    "build:server:api": "cd server/web && npm ci && npm run build && cd ../api npm ci && npm run exe && cp ../executables/api-win.exe ../../build/server",
     "build:react-seed-app": "cd react-seed-app && npm ci && npm run build && cp -r build ../build/react-seed-app",
     "build": "npm run prepare:build:folders && npm run build:electron && npm run build:server:api && npm run build:react-seed-app",
     "package:win:64": "electron-builder build --win --x64 -c.extraMetadata.main=build/electron/app.js",
