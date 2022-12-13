@@ -5,10 +5,10 @@
   "version": "0.0.1",
   "scripts": {
     "start:electron": "npm run build:electron && ELECTRON_START_URL=http://localhost:3000 && electron build/electron/app.js",
-    "prepare:build:folders": "rm -rf build && mkdir build && cd build && mkdir server && mkdir react-seed-app",
+    "prepare:build:folders": "rimraf build && mkdir build && cd build && mkdir server && mkdir react-seed-app",
     "build:electron": "tsc && cp electron/preload.js build/electron && cp electron/getSasPath.html build/electron",
-    "build:server:api": "cd server/web && npm ci && npm run build && cd ../api npm ci && npm run exe && cp ../executables/api-win.exe ../../build/server",
-    "build:react-seed-app": "cd react-seed-app && npm ci && npm run build && cp -r build ../build/react-seed-app",
+    "build:server:api": "cd server/web && npm ci && npm run build && cd ../api && npm ci && npm run exe && cp ../executables/api-win.exe ../../build/server",
+    "build:react-seed-app": "cd react-seed-app && npm ci && npm run build && cp -r build ../build/react-seed-app && npx sasjs cb -t electron && mkdir ../build/react-seed-app/sasjsbuild && cp sasjsbuild/electron.json ../build/react-seed-app/sasjsbuild",
     "build": "npm run prepare:build:folders && npm run build:electron && npm run build:server:api && npm run build:react-seed-app",
     "package:win:64": "electron-builder build --win --x64 -c.extraMetadata.main=build/electron/app.js",
     "prepare": "git rev-parse --git-dir && git config core.hooksPath ./.git-hooks || true",
@@ -29,7 +29,8 @@
     "nsis": {
       "deleteAppDataOnUninstall": true,
       "oneClick": false
-    }
+    },
+    "asar": false
   },
   "publishConfig": {
     "access": "public"
@@ -60,6 +61,7 @@
   },
   "dependencies": {
     "@sasjs/utils": "2.51.0",
+    "axios": "1.2.1",
     "electron-log": "4.4.8"
   }
 }

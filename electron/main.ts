@@ -5,21 +5,26 @@ import url from 'url'
 import { exec, execFile } from 'child_process'
 import {
   serverApiEnvPath,
+  seedAppFolder,
   seedAppPath,
+  seedAppServices,
   getSasPath,
   serverPath,
   preloadPath,
   ping
 } from './utils'
+import axios from 'axios'
 
 export default class Main {
   static mainWindow: Electron.BrowserWindow
   static application: Electron.App
   static BrowserWindow
   static sasPathKey = 'SAS_PATH='
+  static sasjsServicesDeployKey = 'SASJS_SERVICES_DEPLOYED=TRUE'
   static sasjsServerTitle = 'SASjsServer'
   static indexPath: string
   static serverTitle = '@sasjs/server'
+  static seedAppTitle = '@sasjs/react-seed-app'
 
   private static onWindowAllClosed() {
     if (process.platform !== 'darwin') Main.application.quit()
@@ -38,6 +43,20 @@ export default class Main {
     })
   }
 
+  public static startSasJsSeedApp(path?: string) {
+    log.info(`Starting ${Main.seedAppTitle}`)
+    log.info('Loading @sasjs/react-seed-app index.html')
+
+    // INFO: loading @sasjs/react-seed-app index.html
+    Main.mainWindow.loadURL(
+      url.format({
+        pathname: path || seedAppPath,
+        protocol: 'file',
+        slashes: true
+      })
+    )
+  }
+
   static async onReady() {
     log.info(`checking if ${serverApiEnvPath} exists`)
 
@@ -53,6 +72,10 @@ export default class Main {
       if (sasPath) {
         Main.indexPath = seedAppPath
         Main.startSasjsServer()
+
+        if (!env.match(new RegExp(Main.sasjsServicesDeployKey))) {
+          await Main.deploySasjsServices()
+        }
       } else {
         Main.indexPath = getSasPath
       }
@@ -61,12 +84,6 @@ export default class Main {
 
       Main.indexPath = getSasPath
     }
-
-    const startUrl = url.format({
-      pathname: Main.indexPath,
-      protocol: 'file',
-      slashes: true
-    })
 
     Main.mainWindow = new Main.BrowserWindow({
       show: false,
@@ -77,8 +94,43 @@ export default class Main {
 
     Main.mainWindow.maximize()
     Main.mainWindow.show()
-    Main.mainWindow.loadURL(startUrl)
+    Main.startSasJsSeedApp(Main.indexPath)
     Main.mainWindow.on('closed', Main.onClose)
+  }
+
+  static async deploySasjsServices() {
+    log.info(`seedAppServices: ${seedAppServices}`)
+    let services = await readFile(seedAppServices)
+
+    try {
+      services = JSON.parse(services)
+    } catch (err) {
+      log.error(
+        `Error while parsing SASjs services at ${seedAppServices}. Error: ${JSON.stringify(
+          err
+        )}`
+      )
+    }
+
+    const response = await axios.post(
+      'http://localhost:5000/SASjsApi/drive/deploy',
+      services
+    )
+
+    if (response.status === 200) {
+      log.info(`SASjs services successfully deployed.`)
+
+      let env = await readFile(serverApiEnvPath)
+      env += `\n${Main.sasjsServicesDeployKey}`
+
+      await createFile(serverApiEnvPath, env)
+    } else {
+      log.error(
+        `SASjs services deployment failed. @sasjs/server responded: ${JSON.stringify(
+          response
+        )}`
+      )
+    }
   }
 
   static main(app: Electron.App, browserWindow: typeof BrowserWindow) {
@@ -92,47 +144,28 @@ export default class Main {
   }
 
   static async onSetSasPath(_: any, sasPath: string) {
-    log.info(`Received on 'set-sas-path' event.`)
-    log.info(`Extracting application source code.`)
+    // INFO: create .env file with path to SAS executable
+    createFile(serverApiEnvPath, `${Main.sasPathKey}${sasPath}`)
+      .then(async () => {
+        log.info('Created .env file with path to SAS executable')
 
-    // INFO: extract source code
-    exec(
-      'cd resources && npx asar extract app.asar appSrc',
-      async (err, _, stderr) => {
-        if (err) log.error(`extract source code error: ${err}`)
-        if (stderr) log.error(`extract source code stderr: ${stderr}`)
+        Main.startSasjsServer()
 
-        // INFO: create .env file with path to SAS executable
-        createFile(serverApiEnvPath, `${Main.sasPathKey}${sasPath}`)
-          .then(async () => {
-            log.info('Created .env file with path to SAS executable')
+        const isServerUp = await ping(
+          Main.serverTitle,
+          'http',
+          'localhost',
+          5000
+        )
 
-            Main.startSasjsServer()
+        if (isServerUp) {
+          await Main.deploySasjsServices()
 
-            const isServerUp = await ping(
-              Main.serverTitle,
-              'http',
-              'localhost',
-              5000
-            )
-
-            if (isServerUp) {
-              log.info('Loading @sasjs/react-seed-app index.html')
-
-              // INFO: loading @sasjs/react-seed-app index.html
-              Main.mainWindow.loadURL(
-                url.format({
-                  pathname: seedAppPath,
-                  protocol: 'file',
-                  slashes: true
-                })
-              )
-            }
-          })
-          .catch((err) => {
-            log.error(`Failed to create ${serverApiEnvPath}. Error: ${err}`)
-          })
-      }
-    )
+          Main.startSasJsSeedApp()
+        }
+      })
+      .catch((err) => {
+        log.error(`Failed to create ${serverApiEnvPath}. Error: ${err}`)
+      })
   }
 }
