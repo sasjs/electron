@@ -9,6 +9,7 @@ import {
   serverPath
 } from '../utils'
 import * as httpModule from '../utils/http'
+import axios from 'axios'
 
 let execCommand = ''
 let logged = ''
@@ -67,6 +68,9 @@ jest.mock('electron', () => ({
   }
 }))
 
+jest.mock('axios')
+const mockedAxios = axios as jest.Mocked<typeof axios>
+
 describe('Main', () => {
   beforeAll(() => {
     Object.defineProperty(process, 'platform', {
@@ -111,7 +115,11 @@ describe('Main', () => {
       .mockImplementation(() => Promise.resolve(true))
     jest
       .spyOn(fileModule, 'readFile')
-      .mockImplementation(() => Promise.resolve(`${Main.sasPathKey}.env`))
+      .mockImplementation(() =>
+        Promise.resolve(
+          `${Main.sasPathKey}.env\n${Main.sasjsServicesDeployKey}`
+        )
+      )
 
     new Main.main(app, BrowserWindow)
 
@@ -120,7 +128,9 @@ describe('Main', () => {
     const expectedLog = [
       `checking if ${serverApiEnvPath} exists`,
       `${Main.serverTitle} .env file exists.`,
-      `Starting ${Main.serverTitle}`
+      `Starting ${Main.serverTitle}`,
+      `Starting ${Main.seedAppTitle}`,
+      `Loading ${Main.seedAppTitle} index.html`
     ].join('\n')
 
     expect(logged).toEqual(expectedLog)
@@ -140,7 +150,9 @@ describe('Main', () => {
 
     const expectedLog = [
       `checking if ${serverApiEnvPath} exists`,
-      `${Main.serverTitle} .env file exists.`
+      `${Main.serverTitle} .env file exists.`,
+      `Starting ${Main.seedAppTitle}`,
+      `Loading ${Main.seedAppTitle} index.html`
     ].join('\n')
 
     expect(logged).toEqual(expectedLog)
@@ -158,7 +170,9 @@ describe('Main', () => {
 
     const expectedLog = [
       `checking if ${serverApiEnvPath} exists`,
-      `${Main.serverTitle} .env file does not exist.`
+      `${Main.serverTitle} .env file does not exist.`,
+      `Starting ${Main.seedAppTitle}`,
+      `Loading ${Main.seedAppTitle} index.html`
     ].join('\n')
 
     expect(logged).toEqual(expectedLog)
@@ -171,6 +185,8 @@ describe('Main', () => {
       .spyOn(fileModule, 'createFile')
       .mockImplementation(() => Promise.resolve())
 
+    mockedAxios.post.mockReturnValueOnce(Promise.resolve({ status: 200 }))
+
     new Main.main(app, BrowserWindow)
     Main.mainWindow = new Main.BrowserWindow()
 
@@ -179,23 +195,19 @@ describe('Main', () => {
     jest.advanceTimersByTime(200)
 
     const expectedLog = [
-      `Received on 'set-sas-path' event.`,
-      `Extracting application source code.`,
       'Created .env file with path to SAS executable',
       `Starting ${Main.serverTitle}`,
       `Pinging ${Main.serverTitle}`,
       `${Main.serverTitle} is up and running at http://localhost:5000.`,
+      `SASjs services successfully deployed.`,
+      `Starting ${Main.seedAppTitle}`,
       'Loading @sasjs/react-seed-app index.html'
-    ].join('\n')
-    const expectedExecCommands = [
-      `cd resources && npx asar extract app.asar appSrc`
     ].join('\n')
 
     jest.useRealTimers()
     await new Promise((r) => setTimeout(r, 100))
 
     expect(logged).toEqual(expectedLog)
-    expect(execCommand).toEqual(expectedExecCommands)
   })
 
   it('should log error if env file creation failed', async () => {
@@ -209,8 +221,6 @@ describe('Main', () => {
     await ipcMain.emit('set-sas-path')
 
     const expectedLog = [
-      `Received on 'set-sas-path' event.`,
-      `Extracting application source code.`,
       `Failed to create ${serverApiEnvPath}. Error: ${createFileError}`
     ].join('\n')
 

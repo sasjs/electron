@@ -45,7 +45,7 @@ export default class Main {
 
   public static startSasJsSeedApp(path?: string) {
     log.info(`Starting ${Main.seedAppTitle}`)
-    log.info('Loading @sasjs/react-seed-app index.html')
+    log.info(`Loading ${Main.seedAppTitle} index.html`)
 
     // INFO: loading @sasjs/react-seed-app index.html
     Main.mainWindow.loadURL(
@@ -99,7 +99,6 @@ export default class Main {
   }
 
   static async deploySasjsServices() {
-    log.info(`seedAppServices: ${seedAppServices}`)
     let services = await readFile(seedAppServices)
 
     try {
