@@ -21,10 +21,16 @@ jobs:
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
-      - name: Set env
+      - name: Set env_1
         run: echo "USE_HARD_LINKS=false" >> $GITHUB_ENV
 
-      - name: Test env
+      - name: Test env_1
+        run: echo $USE_HARD_LINKS
+      
+      - name: Set env_2
+        run: echo "USE_HARD_LINKS=false" >> $env:GITHUB_ENV
+
+      - name: Test env_2
         run: echo $USE_HARD_LINKS
 
       - name: Build Electron app
