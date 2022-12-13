@@ -184,6 +184,32 @@ describe('Main', () => {
     jest
       .spyOn(fileModule, 'createFile')
       .mockImplementation(() => Promise.resolve())
+    jest.spyOn(fileModule, 'readFile').mockImplementation(() =>
+      Promise.resolve(`{
+"appLoc": "/Public/app/react-seed-app",
+"fileTree": {
+  "members": [
+  {
+    "name": "services",
+    "type": "folder",
+    "members": [
+    {
+      "name": "common",
+      "type": "folder",
+      "members": [
+      {
+        "name": "appinit",
+        "type": "service",
+        "code": "code"
+      }
+      ]
+    }
+    ]
+  }
+  ]
+}
+}`)
+    )
 
     mockedAxios.post.mockReturnValueOnce(Promise.resolve({ status: 200 }))
 
